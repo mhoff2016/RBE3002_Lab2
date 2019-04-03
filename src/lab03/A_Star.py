@@ -29,11 +29,20 @@ class A_Star:
 
 
     def a_star_server(self):
-        rospy.init_node('a_star_server')
-        s =  rospy.Service('a_star', GetPlan, handle_a_star)
+        rospy.init_node('a_star_path_server')
+        s =  rospy.Service('a_star_path', GetPlan, handle_a_star)
         print "ready to star that A"
         rospy.spin()
 
+
+    def a_star_client(start, goal):
+        rospy.wait_for_service('a_star_path')
+        try:
+            a_star_path = rospy.ServiceProxy('a_star_path', GetPlan)
+            resp1 = a_star_path(start, goal)
+            return resp1.path
+        except rospy.ServiceException, e:
+            print "Service call failed: %s"%e
 
 
     def dynamic_map_client(self):
