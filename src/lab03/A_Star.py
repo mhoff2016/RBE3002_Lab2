@@ -25,7 +25,7 @@ class A_Star:
             :return: Path()
         """
         print ("Returning path...")
-        return a_star(req.start, req.goal)
+        return  a_star(req.start, req.goal)
 
 
     def a_star_server(self):
@@ -35,14 +35,7 @@ class A_Star:
         rospy.spin()
 
 
-    def a_star_client(start, goal):
-        rospy.wait_for_service('a_star_path')
-        try:
-            a_star_path = rospy.ServiceProxy('a_star_path', GetPlan)
-            resp1 = a_star_path(start, goal)
-            return resp1.path
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+
 
 
     def dynamic_map_client(self):
@@ -157,4 +150,5 @@ class A_Star:
 
 if __name__ == '__main__':
     print "runnnnnnnning"
-    star = A_Star()
+    while not rospy.is_shutdown():
+        pass
