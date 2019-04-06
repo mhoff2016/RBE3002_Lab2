@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import rospy
 import sys
+from PriorityQueue import PriorityQueue
+from nav_msgs.srv import GetPlan
 
 
 class A_Star:
@@ -25,12 +27,12 @@ class A_Star:
             :return: Path()
         """
         print ("Returning path...")
-        return  a_star(req.start, req.goal)
+        return  self.a_star(req.start, req.goal)
 
 
     def a_star_server(self):
-        rospy.init_node('a_star_path_server')
-        s =  rospy.Service('a_star_path', GetPlan, handle_a_star)
+        #rospy.init_node('a_star_path_server')
+        s =  rospy.Service('a_star_path', GetPlan, self.handle_a_star)
         print "ready to star that A"
         rospy.spin()
 
@@ -150,5 +152,7 @@ class A_Star:
 
 if __name__ == '__main__':
     print "runnnnnnnning"
+    star = A_Star()
+    star.a_star_server()
     while not rospy.is_shutdown():
         pass

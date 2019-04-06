@@ -24,7 +24,7 @@
 		<param name="publish_frequency" type="double" value="50.0" />
 	</node>
 	
-	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find rbe3002)/config/top_down_config.rviz"/>
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find 3002)/config/top_down_config.rviz"/>
 </launch>
 
 
