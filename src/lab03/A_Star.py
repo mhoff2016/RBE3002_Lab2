@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 import rospy
 import sys
-from PriorityQueue import PriorityQueue
+from queue import PriorityQueue
 from nav_msgs.srv import GetPlan
 
+class Node:
+    x = None
+    y = None
+    f = None
 
 class A_Star:
 
@@ -49,8 +53,12 @@ class A_Star:
         """
         pass
 
+    def heuristic(a, b):
+        (x1, y1) = a
+        (x2, y2) = b
+        return abs(x1 - x2) + abs(y1 - y2)
 
-    def a_star(self, start, goal):
+    def a_star(self, startIn, goal):
         """
             A*
             This is where the A* algorithum belongs
@@ -58,13 +66,14 @@ class A_Star:
             :param goal: tuple of goal pose
             :return: dict of tuples
         """
+        start = (startIn.pose.position.x, startIn.pose.position.y)
         frontier = PriorityQueue()
         frontier.put(start, 0)
         came_from = {}
         cost_so_far = {}
         came_from[start] = None
         cost_so_far[start] = 0
-
+        print "In A Star"
         while not frontier.empty():
             current = frontier.get()
 
@@ -75,11 +84,24 @@ class A_Star:
                 new_cost = cost_so_far[current] + self.cost(current, next)
                 if next not in cost_so_far or new_cost < cost_so_far[next]:
                     cost_so_far[next] = new_cost
-                    priority = new_cost + heuristic(goal, next)
+                    priority = new_cost + euclidean_heuristic(goal, next)
                     frontier.put(next, priority)
                     came_from[next] = current
 
-        return came_from, cost_so_far
+
+    def neighbors(self, node):
+            print "in neighbors"
+            neighborMap =[]
+            xCurr = node[0]
+            yCurr = node[1]
+
+            for x in range(-1, 1):
+                pass
+
+            #finish This
+
+
+
 
 
 
@@ -136,7 +158,7 @@ class A_Star:
             published cell of A* to Rviz
             :param frontier: tuples of the point on the frontier set
             :param came_from: tuples of the point on the closed set
-            :return:
+            :return:, 0
         """
         pass
 
@@ -149,6 +171,14 @@ class A_Star:
         """
         pass
 
+
+#       [0 1 0 0 0]
+#       [0 1 0 0 0]
+#       [0 0 0 0 0]
+#       [0 0 0 1 0]
+#       [0 0 0 1 0]
+#top to bottom
+testMap = [0, 100, 0, 0, 0, 0, 100, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ,0, 0, 100, 0]
 
 if __name__ == '__main__':
     print "runnnnnnnning"
