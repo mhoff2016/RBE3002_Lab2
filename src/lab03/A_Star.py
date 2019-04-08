@@ -2,6 +2,7 @@
 import rospy
 import sys
 from queue import PriorityQueue
+from nav_msgs.msg import GridCells, OccupancyGrid
 from nav_msgs.srv import GetPlan
 
 class Node:
@@ -20,7 +21,16 @@ class A_Star:
         """
 
         rospy.init_node("a_star")  # start node
+        self.map = []
+        self.width = None
+        self.height = None
+        self.resolution = None
 
+        self.path = []
+        self.cost = []
+
+        #SUB TO map
+        self.subMap = rospy.Subscriber("/map", OccupancyGrid, self.mapCallback)
 
     def handle_a_star(self, req):
 
@@ -40,6 +50,14 @@ class A_Star:
         print "ready to star that A"
         rospy.spin()
 
+    def mapCallback(self, msg):
+        print "in inital"
+        self.map = msg.data
+        self.width = msg.info.width
+        self.height = msg.info.height
+        self.resolution = msg.info.resolution
+        print "all good"
+        print self.resolution
 
 
 
@@ -58,7 +76,7 @@ class A_Star:
         (x2, y2) = b
         return abs(x1 - x2) + abs(y1 - y2)
 
-    def a_star(self, startIn, goal):
+    def a_star(self, startIn, goalIn):
         """
             A*
             This is where the A* algorithum belongs
@@ -67,6 +85,7 @@ class A_Star:
             :return: dict of tuples
         """
         start = (startIn.pose.position.x, startIn.pose.position.y)
+        goal = (goalIn.pose.position.x, goalIn.pose.position.y)
         frontier = PriorityQueue()
         frontier.put(start, 0)
         came_from = {}
@@ -81,24 +100,47 @@ class A_Star:
                 break
 
             for next in self.neighbors(current):
-                new_cost = cost_so_far[current] + self.cost(current, next)
+                new_cost = cost_so_far[current] + euclidean_heuristic(current, next) ##Should tthis just be euclidean???
                 if next not in cost_so_far or new_cost < cost_so_far[next]:
                     cost_so_far[next] = new_cost
                     priority = new_cost + euclidean_heuristic(goal, next)
                     frontier.put(next, priority)
                     came_from[next] = current
+        self.path =  came_from
+        print came_from
+        self.cost =  cost_so_far
 
 
     def neighbors(self, node):
-            print "in neighbors"
-            neighborMap =[]
-            xCurr = node[0]
-            yCurr = node[1]
+        print "in neighbors"
+        neighborMap =[]
+        xCurr = node[0]
+        yCurr = node[1]
+        #print type(xCurr)
 
-            for x in range(-1, 1):
-                pass
+        for x in range(1, -1, -1): # middle value may need to be -2
+            for y in range(1, -1, -1):
+                #print type(x)
+                if self.validLoc((xCurr+x), yCurr):
+                    neighborMap.append(((xCurr+x), yCurr))
+                if self.validLoc((xCurr+x), (yCurr + y)):
+                    neighborMap.append(((xCurr+x), (yCurr + y)))
+                if self.validLoc((xCurr), (yCurr + y)):
+                    neighborMap.append(((xCurr), (yCurr + y)))
+        return neighborMap
 
-            #finish This
+
+    #determines if a position is a valid one
+    def validLoc(self, x, y):
+        if x or y < 0:
+            return False
+        index = y * width + x
+        if self.map[index] == 0:
+            return True
+        else:
+            return False
+
+
 
 
 
@@ -119,9 +161,7 @@ class A_Star:
         y2 = point2[1]
 
         out =  sqrt((x1 - x2)**2 + (y1 - y2)**2)
-
-
-    pass
+        pass
 
     def move_cost(self, current, next):
         """

@@ -19,12 +19,14 @@
 	x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
 	
 	<param name="tb3_model" value="$(arg model)"/>
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find 3002)/maps/simple_map.yaml"/>
 
 	<node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
 		<param name="publish_frequency" type="double" value="50.0" />
 	</node>
 	
-	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find 3002)/config/top_down_config.rviz"/>
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find 3002)/config/maze_config.rviz"/>
+	<node pkg="tf" type="static_transform_publisher" name="odomToMap" args="0 0 0 0 0 0 1  odom map  1"/>
 </launch>
 
 
