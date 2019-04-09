@@ -7,6 +7,7 @@ from nav_msgs.srv import GetPlan
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Point
 import math
+import copy
 
 class Node:
     x = None
@@ -42,10 +43,45 @@ class A_Star:
         #SUB TO map
         self.subMap = rospy.Subscriber("/map", OccupancyGrid, self.mapCallback)
 
-    def publishClosed(self, start, goal):
+    def publishClosed(self, cells):
             out = GridCells()
-            width = 37
-            height = 37
+            width = self.width
+            height = self.height
+
+            out.cells= cells
+            out.cell_width = .3
+            out.cell_height = .3
+            out.header.frame_id= "map"
+            for i in range(0,40):
+                #print out
+                self.pubClosedX.publish(out)
+            #print "published closed"
+
+    def publishFrontier(self, cells):
+            #print "in pubfrontier"
+            out = GridCells()
+            width = self.width
+            height = self.height
+            '''point1 = Point()
+            point2 = Point()
+            point1.x = start[0]
+            point1.y = start[1]
+            point1.z = 1'''
+
+            #cells = tuple((point1))
+            out.cells= cells
+            out.cell_width = .3
+            out.cell_height = .3
+            out.header.frame_id= "map"
+            for i in range(0,40):
+                #print out
+                self.pubFrontier.publish(out)
+            #print "published"
+
+    def publishPath(self, start, goal):
+            out = GridCells()
+            width = self.width
+            height = self.height
             point1 = Point()
             point2 = Point()
             point1.x = start[0]
@@ -61,8 +97,9 @@ class A_Star:
             out.header.frame_id= "map"
             for i in range(0,40):
                 #print out
-                self.pubClosedX.publish(out)
+                self.pubPath.publish(out)
             print "published"
+
 
     def handle_a_star(self, req):
 
@@ -133,15 +170,20 @@ class A_Star:
             :param goal: tuple of goal pose
             :return: dict of tuples
         """
-        startPoseX =  (int((startIn.pose.position.x)/.3))
-        startPoseY =  (int((startIn.pose.position.y)/.3))
-        start = (startPoseX, startPoseY)
+        startPoseX =  startIn.pose.position.x
+        startPoseY =  startIn.pose.position.y
+        startPoint = (startPoseX, startPoseY)
+        start = self.mapToWorld(startPoint)
         print "start:", start
-        goalPoseX = (int((goalIn.pose.position.x)/.3))
-        goalPoseY = (int((goalIn.pose.position.y)/.3))
-        goal = (goalPoseX, goalPoseY)
+        goalPoseX = goalIn.pose.position.x
+        goalPoseY = goalIn.pose.position.y
+        goal = self.mapToWorld((goalPoseX, goalPoseY))
         print "goal: ", goal
-        self.publishClosed(start, goal)
+        self.publishPath(self.worldToMap(start), self.worldToMap(goal))
+        frontierSet = []
+        closedSet = []
+        pathSet = ()
+        tempPoint = Point()
 
 
 
@@ -156,12 +198,28 @@ class A_Star:
         print "In A Star"
         while not frontier.empty():
             current = frontier.get()
+            #print "current", current
+            temp = self.worldToMap(current)
+            tempPoint.x = temp[0]
+            tempPoint.y = temp[1]
+            #tempPoint2 = copy.deepcopy(tempPoint)
+            frontierSet.append(tempPoint)
+            #print "fronttierset", frontierSet
+            #print frontierSet
+            self.publishFrontier(frontierSet)
+            #print "length: ", len(frontierSet)
 
             if current == goal:
                 break
 
             for next in self.neighbors(current):
                 #print "in astar for"
+                temp = self.worldToMap(next)
+                tempPoint.x = temp[0]
+                tempPoint.y = temp[1]
+                tempPoint2 = copy.deepcopy(tempPoint)
+                closedSet.append(tempPoint2)
+                self.publishClosed(closedSet)
                 new_cost = cost_so_far[current] + self.euclidean_heuristic(current, next) ##Should tthis just be euclidean???
                 if next not in cost_so_far or new_cost < cost_so_far[next]:
                     cost_so_far[next] = new_cost
@@ -169,7 +227,7 @@ class A_Star:
                     frontier.put(next, priority)
                     came_from[next] = current
         self.path =  came_from
-        print "cost_so_far:", came_from
+        print "came_from:", came_from
         self.cost =  cost_so_far
 
 
@@ -207,7 +265,15 @@ class A_Star:
         else:
             return False
 
+    def worldToMap(self, point):
+        #print "wTM x: ", point[0]
+        #print "wTM y: ", point[1]
+        return (int(point[0]*.3)+1, int(point[1]*.3))
 
+    def mapToWorld(self, point):
+        #print "wTM x: ", point[0]
+        #print "wTM y: ", point[1]
+        return ((int((point[0])/.3)),(int((point[1])/.3)))
 
 
 
@@ -277,6 +343,18 @@ if __name__ == '__main__':
     print "runnnnnnnning"
     star = A_Star()
     rospy.sleep(1)
+    p = Point()
+    p.x = 3
+    p.y = 3
+    p.z = 1
+    s = Point()
+    s.x = 1
+    s.y = 1
+    s.z = 1
+    input1 = []
+    input1.append(p)
+    input1.append(s)
+    star.publishFrontier(input1)
     star.a_star_server()
     while not rospy.is_shutdown():
         pass
