@@ -4,6 +4,9 @@ import sys
 from queue import PriorityQueue
 from nav_msgs.msg import GridCells, OccupancyGrid
 from nav_msgs.srv import GetPlan
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Point
+import math
 
 class Node:
     x = None
@@ -29,8 +32,37 @@ class A_Star:
         self.path = []
         self.cost = []
 
+        #pub to gridcells
+        self.pubClosedX = rospy.Publisher("/closed_set", GridCells, queue_size=40)
+
+        self.pubFrontier = rospy.Publisher("/frontier_set", GridCells, queue_size=10)
+
+        self.pubPath = rospy.Publisher("/path_set", GridCells, queue_size=10)
+
         #SUB TO map
         self.subMap = rospy.Subscriber("/map", OccupancyGrid, self.mapCallback)
+
+    def publishClosed(self, start, goal):
+            out = GridCells()
+            width = 37
+            height = 37
+            point1 = Point()
+            point2 = Point()
+            point1.x = start[0]
+            point2.x = goal[0]
+            point1.y = start[1]
+            point2.y = goal[1]
+            point1.z = 1
+            point2.z = 1
+            cells = tuple((point1, point2))
+            out.cells = cells
+            out.cell_width = .3
+            out.cell_height = .3
+            out.header.frame_id= "map"
+            for i in range(0,40):
+                #print out
+                self.pubClosedX.publish(out)
+            print "published"
 
     def handle_a_star(self, req):
 
@@ -76,6 +108,23 @@ class A_Star:
         (x2, y2) = b
         return abs(x1 - x2) + abs(y1 - y2)
 
+    def euclidean_heuristic(self, point1, point2):
+        """
+            calculate the dist between two points
+            :param point1: tuple of location
+            :param point2: tuple of location
+            :return: dist between two points
+        """
+        x1 = point1[0]
+        y1 = point1[1]
+
+        x2 = point2[0]
+        y2 = point2[1]
+
+        out =  math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+        return out
+
+
     def a_star(self, startIn, goalIn):
         """
             A*
@@ -84,8 +133,20 @@ class A_Star:
             :param goal: tuple of goal pose
             :return: dict of tuples
         """
-        start = (startIn.pose.position.x, startIn.pose.position.y)
-        goal = (goalIn.pose.position.x, goalIn.pose.position.y)
+        startPoseX =  (int((startIn.pose.position.x)/.3))
+        startPoseY =  (int((startIn.pose.position.y)/.3))
+        start = (startPoseX, startPoseY)
+        print "start:", start
+        goalPoseX = (int((goalIn.pose.position.x)/.3))
+        goalPoseY = (int((goalIn.pose.position.y)/.3))
+        goal = (goalPoseX, goalPoseY)
+        print "goal: ", goal
+        self.publishClosed(start, goal)
+
+
+
+
+
         frontier = PriorityQueue()
         frontier.put(start, 0)
         came_from = {}
@@ -100,19 +161,20 @@ class A_Star:
                 break
 
             for next in self.neighbors(current):
-                new_cost = cost_so_far[current] + euclidean_heuristic(current, next) ##Should tthis just be euclidean???
+                #print "in astar for"
+                new_cost = cost_so_far[current] + self.euclidean_heuristic(current, next) ##Should tthis just be euclidean???
                 if next not in cost_so_far or new_cost < cost_so_far[next]:
                     cost_so_far[next] = new_cost
-                    priority = new_cost + euclidean_heuristic(goal, next)
+                    priority = new_cost + self.euclidean_heuristic(goal, next)
                     frontier.put(next, priority)
                     came_from[next] = current
         self.path =  came_from
-        print came_from
+        print "cost_so_far:", came_from
         self.cost =  cost_so_far
 
 
     def neighbors(self, node):
-        print "in neighbors"
+        #print "in neighbors"
         neighborMap =[]
         xCurr = node[0]
         yCurr = node[1]
@@ -132,10 +194,15 @@ class A_Star:
 
     #determines if a position is a valid one
     def validLoc(self, x, y):
-        if x or y < 0:
+        #print "in ValidLoc"
+        #print "x:", x
+        #print "y:", y
+        if x < 0 or y < 0:
+            #print"returns false"
             return False
-        index = y * width + x
+        index = int(y * self.width + x) #this may need to be adjusted
         if self.map[index] == 0:
+            #print "returns true"
             return True
         else:
             return False
@@ -147,21 +214,7 @@ class A_Star:
 
 
 
-    def euclidean_heuristic(self, point1, point2):
-        """
-            calculate the dist between two points
-            :param point1: tuple of location
-            :param point2: tuple of location
-            :return: dist between two points
-        """
-        x1 = point1[0]
-        y1 = point1[1]
 
-        x2 = point2[0]
-        y2 = point2[1]
-
-        out =  sqrt((x1 - x2)**2 + (y1 - y2)**2)
-        pass
 
     def move_cost(self, current, next):
         """
@@ -223,6 +276,7 @@ testMap = [0, 100, 0, 0, 0, 0, 100, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ,
 if __name__ == '__main__':
     print "runnnnnnnning"
     star = A_Star()
+    rospy.sleep(1)
     star.a_star_server()
     while not rospy.is_shutdown():
         pass

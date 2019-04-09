@@ -31,12 +31,6 @@ class Client:
 
         #SUB TO map
         #self.subMap = rospy.Subscriber("/map", OccupancyGrid, self.mapCallback)
-        #pub to gridcells
-        self.pubClosedX = rospy.Publisher("/closed_set", GridCells, queue_size=40)
-
-        self.pubFrontier = rospy.Publisher("/frontier_set", GridCells, queue_size=10)
-
-        self.pubPath = rospy.Publisher("/path_set", GridCells, queue_size=10)
 
     def a_star_client(self, start, goal):
         print "in_clinet"
@@ -64,6 +58,7 @@ class Client:
         print "in end"
         self.end = msg.pose
         print self.end.position.x
+        print self.end.position.y
         #print self.start.position.x
         if self.start is not None:
             #print "in if"
@@ -74,6 +69,7 @@ class Client:
         #PoseWithCovarianceStamped
         self.start = msg.pose.pose
         print self.start.position.x
+        print self.start.position.y
 
     '''def mapCallback(self, msg):
         print "in inital"
@@ -84,28 +80,6 @@ class Client:
         print "all good"
         print self.resolution'''
 
-
-    def publishClosed(self):
-        out = GridCells()
-        width = 37
-        height = 37
-        point1 = Point()
-        point2 = Point()
-        point1.x = 1
-        point2.x = 5
-        point1.y = 5
-        point2.y = 5
-        point1.z = 1
-        point2.z = 1
-        cells = tuple((point1, point2))
-        out.cells = cells
-        out.cell_width = .3
-        out.cell_height = .3
-        out.header.frame_id= "map"
-        for i in range(0,40):
-            #print out
-            self.pubClosedX.publish(out)
-        print "published"
 
     def world_to_map(x, y, my_map):
         """
@@ -126,8 +100,6 @@ class Client:
 
 if __name__ == '__main__':
     client1 = Client()
-    rospy.sleep(1)
-    client1.publishClosed()
     print("running client")
     while not rospy.is_shutdown():
         pass
