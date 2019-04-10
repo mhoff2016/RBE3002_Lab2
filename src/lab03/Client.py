@@ -53,6 +53,7 @@ class Client:
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
 
+#callback that sets appropriate fields in self.
     def endCallback(self, msg):
         #PoseStamped
         print "in end"
@@ -63,7 +64,7 @@ class Client:
         if self.start is not None:
             #print "in if"
             self.a_star_client(self.start, self.end)
-
+#callback that sets appropriate fields for start
     def initialCallback(self, msg):
         print "in inital"
         #PoseWithCovarianceStamped
@@ -71,31 +72,7 @@ class Client:
         print self.start.position.x
         print self.start.position.y
 
-    '''def mapCallback(self, msg):
-        print "in inital"
-        self.map = msg.data
-        self.width = msg.info.width
-        self.height = msg.info.height
-        self.resolution = msg.info.resolution
-        print "all good"
-        print self.resolution'''
 
-
-    def world_to_map(x, y, my_map):
-        """
-            converts a point from the world to the map
-            :param x: float of x position
-            :param y: float of y position
-            :return: tuple of converted point
-        """
-
-    def map_to_world(x, y, my_map):
-        """
-            converts a point from the map to the world
-            :param x: float of x position
-            :param y: float of y position
-            :return: tuple of converted point
-        """
 
 
 if __name__ == '__main__':

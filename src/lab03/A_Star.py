@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 import rospy
 import sys
-from queue import PriorityQueue
-from nav_msgs.msg import GridCells, OccupancyGrid
+from nav_msgs.msg import GridCells, OccupancyGrid, Path
 from nav_msgs.srv import GetPlan
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Point
+from PriorityQueue import *
 import math
 import copy
+from Robot import *
 
-class Node:
-    x = None
-    y = None
-    f = None
 
 class A_Star:
 
@@ -25,38 +22,44 @@ class A_Star:
         """
 
         rospy.init_node("a_star")  # start node
+        #stores data coming in
         self.map = []
         self.width = None
         self.height = None
         self.resolution = None
 
+        #stores data realte to paths
         self.path = []
         self.cost = []
+        self.mapPose = []
 
         #pub to gridcells
-        self.pubClosedX = rospy.Publisher("/closed_set", GridCells, queue_size=40)
+        self.pubClosedX = rospy.Publisher("/closed_set", GridCells, queue_size=10)
 
         self.pubFrontier = rospy.Publisher("/frontier_set", GridCells, queue_size=10)
 
-        self.pubPath = rospy.Publisher("/path_set", GridCells, queue_size=10)
-
+        #self.pubPath = rospy.Publisher("/path_set", GridCells, queue_size=10)
+        #publishes to path
+        self.pubPath = rospy.Publisher("/path", Path, queue_size=10)
         #SUB TO map
         self.subMap = rospy.Subscriber("/map", OccupancyGrid, self.mapCallback)
 
+#Publishes to closed set
     def publishClosed(self, cells):
             out = GridCells()
             width = self.width
             height = self.height
 
             out.cells= cells
-            out.cell_width = .5
-            out.cell_height = .5
+            out.cell_width = .3
+            out.cell_height = .3
             out.header.frame_id= "map"
             for i in range(0,2):
                 #print out
                 self.pubClosedX.publish(out)
             #print "published closed"
 
+    #paints to frontier
     def publishFrontier(self, cells):
             #print "in pubfrontier"
             out = GridCells()
@@ -72,28 +75,30 @@ class A_Star:
                 self.pubFrontier.publish(out)
             #print "published"
 
+#paints to path
     def publishPath(self, cells):
-            out = GridCells()
+            out = Path()
             pointCells = []
             width = self.width
             height = self.height
             for cell in cells:
                 celly = self.worldToMap(cell)
-                somePoint = Point()
-                somePoint.x = celly[0]
-                somePoint.y = celly[1]
-                somePoint2 = copy.deepcopy(somePoint)
+                posey = PoseStamped()
+                posey.pose.position.x = celly[0]
+                posey.pose.position.y  = celly[1]
+                somePoint2 = copy.deepcopy(posey)
                 pointCells.append(somePoint2)
 
             #cells = tuple((point1))
-            out.cells= pointCells
-            out.cell_width = .3
-            out.cell_height = .3
+            out.poses= pointCells
+            self.mapPose = pointCells
+            #out.cell_width = .3
+            #out.cell_height = .3
             out.header.frame_id= "map"
             for i in range(0,2):
                 #print out
                 self.pubPath.publish(out)
-            print "published"
+            #print "published"
 
 
     def handle_a_star(self, req):
@@ -107,7 +112,7 @@ class A_Star:
         print ("Returning path...")
         return  self.a_star(req.start, req.goal)
 
-
+#spins up
     def a_star_server(self):
         #rospy.init_node('a_star_path_server')
         s =  rospy.Service('a_star_path', GetPlan, self.handle_a_star)
@@ -115,13 +120,11 @@ class A_Star:
         rospy.spin()
 
     def mapCallback(self, msg):
-        print "in inital"
         self.map = msg.data
         self.width = msg.info.width
         self.height = msg.info.height
         self.resolution = msg.info.resolution
-        print "all good"
-        print self.resolution
+        #print self.resolution
 
 
 
@@ -175,64 +178,69 @@ class A_Star:
         goalPoseY = goalIn.pose.position.y
         goalPoint = (goalPoseX, goalPoseY)
         print "actual goal: ", goalPoint
+        #converts to correct units
         goal = self.mapToWorld(goalPoint)
         print "goal: ", goal
-        #self.publishPath(self.worldToMap(start), self.worldToMap(goal))
+
         frontierSet = []
         closedSet = []
         pathSet = ()
         tempPoint = Point()
 
-
-
-
-
+        #INIIALIZES THE PRIORITY QUEUE
         frontier = PriorityQueue()
         frontier.put(start, 0)
         came_from = {}
         cost_so_far = {}
         came_from[start] = None
         cost_so_far[start] = 0
-        print "In A Star"
+        #print "In A Star"
         while not frontier.empty():
+            #picks next in priority queue
             current = frontier.get()
-            #print "current", current
+            #creates a copy and adds it to a list
             temp = self.worldToMap(current)
             tempPoint.x = temp[0]
             tempPoint.y = temp[1]
-            #tempPoint2 = copy.deepcopy(tempPoint)
             frontierSet.append(tempPoint)
-            #print "fronttierset", frontierSet
-            #print frontierSet
             self.publishFrontier(frontierSet)
-            #print "length: ", len(frontierSet)
+
 
             if current == goal:
                 break
 
             for next in self.neighbors(current):
-                #print "in astar for"
+                #creates a copy and adds it to a list
                 temp = self.worldToMap(next)
                 tempPoint.x = temp[0]
                 tempPoint.y = temp[1]
                 tempPoint2 = copy.deepcopy(tempPoint)
                 closedSet.append(tempPoint2)
                 self.publishClosed(closedSet)
+                #previous cost + current cost
                 new_cost = cost_so_far[current] + self.euclidean_heuristic(current, next) ##Should tthis just be euclidean???
+
                 if next not in cost_so_far or new_cost < cost_so_far[next]:
                     cost_so_far[next] = new_cost
                     priority = new_cost + self.euclidean_heuristic(goal, next)
-                    frontier.put(next, priority)
+                    frontier.put(next, priority)#adds to priority queue
                     came_from[next] = current
+
         self.path =  came_from
-        print "came_from:", came_from
+        #print "came_from:", came_from
         self.cost =  cost_so_far
         resPath = self.reconstruct_path(start, goal, came_from)
-        print "path:", resPath
+        #print "path:", resPath
+        #optPath = self.optimize_path(resPath)
+        #print "\noptomized path:", optPath
+        output = resPath
         self.publishPath(resPath)
+        #output = getPlan()
+        #output.plan =  self.mapPose
+        return output
 
 
-
+#Checks for neighbors or a current point
     def neighbors(self, node):
         #print "in neighbors"
         neighborMap =[]
@@ -240,8 +248,8 @@ class A_Star:
         yCurr = float(node[1])
         #print type(xCurr)
 
-        for x in range(1, -2, -1): # middle value may need to be -2
-            for y in range(1, -2, -1):
+        for x in range(1, -2, -2): # middle value may need to be -2
+            for y in range(1, -2, -2):
                 #print type(x)
 
                 if (self.validLoc((xCurr+(x)), yCurr)) and\
@@ -272,9 +280,11 @@ class A_Star:
         else:
             return False
 
+#Converts units in order to comminicate with map
     def worldToMap(self, point):
         #print "wTM x: ", point[0]
         #print "wTM y: ", point[1]
+        #change .3 to res
 
         newX=(point[0]*.3)
         newY= (point[1]*.3)+.3
@@ -283,29 +293,14 @@ class A_Star:
 
 
         return (newX,newY)
-
+#Converts units in order to comminicate with world
     def mapToWorld(self, point):
         #print "wTM x: ", point[0]
         #print "wTM y: ", point[1]
         return ((int((point[0])/.3)),(int((point[1])/.3)))
 
 
-
-
-
-
-
-
-    def move_cost(self, current, next):
-        """
-              calculate the dist between two points
-              :param current: tuple of location
-              :param next: tuple of location
-              :return: dist between two points
-        """
-        pass
-
-
+    #finds path from the list of all visted nodes by tracing backwards
     def reconstruct_path(self, start, goal, came_from):
         """
             Rebuild the path from a dictionary
@@ -322,32 +317,35 @@ class A_Star:
         return pathSet
 
 
+#optomizes path so that movements in a straight path are simplified
     def optimize_path(self, path):
-        """
-            remove redundant points in hte path
-            :param path: list of tuples
-            :return: reduced list of tuples
-        """
-        pass
 
-    def paint_cells(self, frontier, came_from):
-        # type: (list, list) -> None
         """
-            published cell of A* to Rviz
-            :param frontier: tuples of the point on the frontier set
-            :param came_from: tuples of the point on the closed set
-            :return:, 0
+               remove redundant points in hte path
+               :param path: list of tuples
+               :return: reduced list of tuples
         """
-        pass
+        length = len(path)
 
+        for x in range(0, length):
+            for point in path:
+                pointIndex = path.index(point)
+                flag = True # True means not searching yet
+                nextIndex = pointIndex + 1
+                lastIndex = nextIndex +1
 
-    def publish_path(self, points):
-        """
-            Create a Path() and publishes the cells if Paint is true
-            :param points: list of tuples of the path
-            :return: Path()
-        """
-        pass
+                while lastIndex < length:
+                    if point[0] == path[nextIndex][0]:
+                        if  point[0] == path[lastIndex][0]:
+                            del path[nextIndex]
+                            length = len(path)
+                            break
+                    if point[1] == path[nextIndex][1]:
+                        if  point[1] == path[lastIndex][1]:
+                            del path[nextIndex]
+                            length = len(path)
+                            break
+        return path
 
 
 #       [0 1 0 0 0]
@@ -366,7 +364,8 @@ if __name__ == '__main__':
     rospy.sleep(1)
 
     n = star.neighbors((1, 1))
-    print(n)
+    #print(n)
+    #for testing purposes.
     p = Point()
     p.x = 3
     p.y = 3
@@ -382,9 +381,3 @@ if __name__ == '__main__':
     star.a_star_server()
     while not rospy.is_shutdown():
         pass
-    """
-
-    a = A_Star()
-    n = a.neighbors((3, 3))
-    print(n)
-    """
