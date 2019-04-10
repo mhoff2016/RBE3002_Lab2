@@ -225,9 +225,7 @@ class A_Star:
         #print "came_from:", came_from
         self.cost =  cost_so_far
         resPath = self.reconstruct_path(start, goal, came_from)
-        #print "path:", resPath
         #optPath = self.optimize_path(resPath)
-        #print "\noptomized path:", optPath
         output = resPath
         self.publishPath(resPath)
         #output = getPlan()
@@ -237,14 +235,15 @@ class A_Star:
 
 #Checks for neighbors or a current point
     def neighbors(self, node):
-        #print "in neighbors"
+        #stores all valid neighbors
         neighborMap =[]
+        #current nodes x and y
         xCurr = float(node[0])
         yCurr = float(node[1])
         #print type(xCurr)
 
-        for x in range(1, -2, -2): # middle value may need to be -2
-            for y in range(1, -2, -2):
+        for x in range(1, -2, -2): # check for valid locations when x +1 and x-1
+            for y in range(1, -2, -2):# check for valid locations when y +1 and y-1
                 #print type(x)
 
                 if (self.validLoc((xCurr+(x)), yCurr)) and\
