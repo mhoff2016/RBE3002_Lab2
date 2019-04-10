@@ -51,8 +51,8 @@ class A_Star:
             height = self.height
 
             out.cells= cells
-            out.cell_width = .3
-            out.cell_height = .3
+            out.cell_width = self.resolution
+            out.cell_height = self.resolution
             out.header.frame_id= "map"
             for i in range(0,2):
                 #print out
@@ -67,8 +67,8 @@ class A_Star:
             height = self.height
             #cells = tuple((point1))
             out.cells= cells
-            out.cell_width = .3
-            out.cell_height = .3
+            out.cell_width = self.resolution
+            out.cell_height = self.resolution
             out.header.frame_id= "map"
             for i in range(0,2):
                 #print out
@@ -112,7 +112,7 @@ class A_Star:
         print ("Returning path...")
         return  self.a_star(req.start, req.goal)
 
-#spins up
+    #spins up
     def a_star_server(self):
         #rospy.init_node('a_star_path_server')
         s =  rospy.Service('a_star_path', GetPlan, self.handle_a_star)
@@ -127,18 +127,8 @@ class A_Star:
         #print self.resolution
 
 
-
-
-    def dynamic_map_client(self):
-
-        """
-            Service call to get map and set class variables
-            This can be changed to call the expanded map
-            :return:
-        """
-        pass
-
     def heuristic(a, b):
+        #not being used
         (x1, y1) = a
         (x2, y2) = b
         return abs(x1 - x2) + abs(y1 - y2)
@@ -168,12 +158,15 @@ class A_Star:
             :param goal: tuple of goal pose
             :return: dict of tuples
         """
+        print"in a star"
+        #extracts x and y values
         startPoseX =  startIn.pose.position.x
         startPoseY =  startIn.pose.position.y
         startPoint = (startPoseX, startPoseY)
         print "actual start: ", startPoint
         start = self.mapToWorld(startPoint)
         print "start:", start
+        #extracts x and y values
         goalPoseX = goalIn.pose.position.x
         goalPoseY = goalIn.pose.position.y
         goalPoint = (goalPoseX, goalPoseY)
@@ -181,15 +174,17 @@ class A_Star:
         #converts to correct units
         goal = self.mapToWorld(goalPoint)
         print "goal: ", goal
-
+        #initializes lists
         frontierSet = []
         closedSet = []
         pathSet = ()
+        #initializes temporay point
         tempPoint = Point()
 
         #INIIALIZES THE PRIORITY QUEUE
         frontier = PriorityQueue()
         frontier.put(start, 0)
+        #initializes dicts
         came_from = {}
         cost_so_far = {}
         came_from[start] = None
@@ -205,10 +200,10 @@ class A_Star:
             frontierSet.append(tempPoint)
             self.publishFrontier(frontierSet)
 
-
+            #stops if current node is the goal
             if current == goal:
                 break
-
+            #search through each of the neighbors and determine costs
             for next in self.neighbors(current):
                 #creates a copy and adds it to a list
                 temp = self.worldToMap(next)
@@ -219,7 +214,7 @@ class A_Star:
                 self.publishClosed(closedSet)
                 #previous cost + current cost
                 new_cost = cost_so_far[current] + self.euclidean_heuristic(current, next) ##Should tthis just be euclidean???
-
+                #adds to priority queue or updates with lower costs
                 if next not in cost_so_far or new_cost < cost_so_far[next]:
                     cost_so_far[next] = new_cost
                     priority = new_cost + self.euclidean_heuristic(goal, next)
@@ -293,6 +288,7 @@ class A_Star:
 
 
         return (newX,newY)
+
 #Converts units in order to comminicate with world
     def mapToWorld(self, point):
         #print "wTM x: ", point[0]
@@ -359,25 +355,26 @@ testMap = [0, 100, 0, 0, 0, 0, 100, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ,
 if __name__ == '__main__':
 
     print "runnnnnnnning"
+    #create a star object
     star = A_Star()
-
+    #let things spin up
     rospy.sleep(1)
-
-    n = star.neighbors((1, 1))
-    #print(n)
-    #for testing purposes.
-    p = Point()
-    p.x = 3
-    p.y = 3
-    p.z = 1
-    s = Point()
-    s.x = 1
-    s.y = 1
-    s.z = 1
-    input1 = []
-    input1.append(p)
-    input1.append(s)
-    star.publishFrontier(input1)
     star.a_star_server()
+    #for testing purposes.
+    # n = star.neighbors((1, 1))
+    # #print(n)
+    # p = Point()
+    # p.x = 3
+    # p.y = 3
+    # p.z = 1
+    # s = Point()
+    # s.x = 1
+    # s.y = 1
+    # s.z = 1
+    # input1 = []
+    # input1.append(p)
+    # input1.append(s)
+    # star.publishFrontier(input1)
+
     while not rospy.is_shutdown():
         pass
