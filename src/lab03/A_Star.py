@@ -49,10 +49,10 @@ class A_Star:
             height = self.height
 
             out.cells= cells
-            out.cell_width = .3
-            out.cell_height = .3
+            out.cell_width = .5
+            out.cell_height = .5
             out.header.frame_id= "map"
-            for i in range(0,40):
+            for i in range(0,2):
                 #print out
                 self.pubClosedX.publish(out)
             #print "published closed"
@@ -62,40 +62,35 @@ class A_Star:
             out = GridCells()
             width = self.width
             height = self.height
-            '''point1 = Point()
-            point2 = Point()
-            point1.x = start[0]
-            point1.y = start[1]
-            point1.z = 1'''
-
             #cells = tuple((point1))
             out.cells= cells
             out.cell_width = .3
             out.cell_height = .3
             out.header.frame_id= "map"
-            for i in range(0,40):
+            for i in range(0,2):
                 #print out
                 self.pubFrontier.publish(out)
             #print "published"
 
-    def publishPath(self, start, goal):
+    def publishPath(self, cells):
             out = GridCells()
+            pointCells = []
             width = self.width
             height = self.height
-            point1 = Point()
-            point2 = Point()
-            point1.x = start[0]
-            point2.x = goal[0]
-            point1.y = start[1]
-            point2.y = goal[1]
-            point1.z = 1
-            point2.z = 1
-            cells = tuple((point1, point2))
-            out.cells = cells
+            for cell in cells:
+                celly = self.worldToMap(cell)
+                somePoint = Point()
+                somePoint.x = celly[0]
+                somePoint.y = celly[1]
+                somePoint2 = copy.deepcopy(somePoint)
+                pointCells.append(somePoint2)
+
+            #cells = tuple((point1))
+            out.cells= pointCells
             out.cell_width = .3
             out.cell_height = .3
             out.header.frame_id= "map"
-            for i in range(0,40):
+            for i in range(0,2):
                 #print out
                 self.pubPath.publish(out)
             print "published"
@@ -173,13 +168,16 @@ class A_Star:
         startPoseX =  startIn.pose.position.x
         startPoseY =  startIn.pose.position.y
         startPoint = (startPoseX, startPoseY)
+        print "actual start: ", startPoint
         start = self.mapToWorld(startPoint)
         print "start:", start
         goalPoseX = goalIn.pose.position.x
         goalPoseY = goalIn.pose.position.y
-        goal = self.mapToWorld((goalPoseX, goalPoseY))
+        goalPoint = (goalPoseX, goalPoseY)
+        print "actual goal: ", goalPoint
+        goal = self.mapToWorld(goalPoint)
         print "goal: ", goal
-        self.publishPath(self.worldToMap(start), self.worldToMap(goal))
+        #self.publishPath(self.worldToMap(start), self.worldToMap(goal))
         frontierSet = []
         closedSet = []
         pathSet = ()
@@ -229,24 +227,32 @@ class A_Star:
         self.path =  came_from
         print "came_from:", came_from
         self.cost =  cost_so_far
+        resPath = self.reconstruct_path(start, goal, came_from)
+        print "path:", resPath
+        self.publishPath(resPath)
+
 
 
     def neighbors(self, node):
         #print "in neighbors"
         neighborMap =[]
-        xCurr = node[0]
-        yCurr = node[1]
+        xCurr = float(node[0])
+        yCurr = float(node[1])
         #print type(xCurr)
 
-        for x in range(1, -1, -1): # middle value may need to be -2
-            for y in range(1, -1, -1):
+        for x in range(1, -2, -1): # middle value may need to be -2
+            for y in range(1, -2, -1):
                 #print type(x)
-                if self.validLoc((xCurr+x), yCurr):
-                    neighborMap.append(((xCurr+x), yCurr))
-                if self.validLoc((xCurr+x), (yCurr + y)):
-                    neighborMap.append(((xCurr+x), (yCurr + y)))
-                if self.validLoc((xCurr), (yCurr + y)):
-                    neighborMap.append(((xCurr), (yCurr + y)))
+
+                if (self.validLoc((xCurr+(x)), yCurr)) and\
+                    not ((xCurr+(x)), yCurr) in neighborMap:
+                    neighborMap.append(((xCurr+(x)), yCurr))
+                if self.validLoc((xCurr+(x)), (yCurr + (y))) and\
+                    not ((xCurr+(x)), (yCurr + (y))) in neighborMap:
+                    neighborMap.append(((xCurr+(x)), (yCurr + (y))))
+                if self.validLoc((xCurr), (yCurr + (y))) and\
+                    not ((xCurr), (yCurr + (y))) in neighborMap:
+                    neighborMap.append(((xCurr), (yCurr + (y))))
         return neighborMap
 
 
@@ -255,10 +261,11 @@ class A_Star:
         #print "in ValidLoc"
         #print "x:", x
         #print "y:", y
-        if x < 0 or y < 0:
+        if x <= 0 or y <= 0:
             #print"returns false"
             return False
         index = int(y * self.width + x) #this may need to be adjusted
+        #print(index)
         if self.map[index] == 0:
             #print "returns true"
             return True
@@ -268,7 +275,14 @@ class A_Star:
     def worldToMap(self, point):
         #print "wTM x: ", point[0]
         #print "wTM y: ", point[1]
-        return (int(point[0]*.3)+1, int(point[1]*.3))
+
+        newX=(point[0]*.3)
+        newY= (point[1]*.3)+.3
+        #print "newX:", newX
+        #print "newY:", newY
+
+
+        return (newX,newY)
 
     def mapToWorld(self, point):
         #print "wTM x: ", point[0]
@@ -300,7 +314,12 @@ class A_Star:
             :param came_from: dictionary of tuples
             :return: list of tuples
         """
-        pass
+        pathSet = [goal]
+        prevPoint = came_from[goal]
+        while prevPoint != None:
+            pathSet.append(prevPoint)
+            prevPoint = came_from[prevPoint]
+        return pathSet
 
 
     def optimize_path(self, path):
@@ -340,9 +359,14 @@ class A_Star:
 testMap = [0, 100, 0, 0, 0, 0, 100, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ,0, 0, 100, 0]
 
 if __name__ == '__main__':
+
     print "runnnnnnnning"
     star = A_Star()
+
     rospy.sleep(1)
+
+    n = star.neighbors((1, 1))
+    print(n)
     p = Point()
     p.x = 3
     p.y = 3
@@ -358,3 +382,9 @@ if __name__ == '__main__':
     star.a_star_server()
     while not rospy.is_shutdown():
         pass
+    """
+
+    a = A_Star()
+    n = a.neighbors((3, 3))
+    print(n)
+    """
