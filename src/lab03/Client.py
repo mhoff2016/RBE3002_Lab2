@@ -8,20 +8,20 @@ from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Point
 from tf.transformations import euler_from_quaternion
 import math
+from Robot import *
 
+##fix this
 class Client:
     def __init__(self):
+        #store start and end
         self.start = None
         self.end = None
-
-
+        #Store some map properties
         self.map = []
         self.width = None
         self.height = None
         self.resolution = None
-
-
-
+        #name client
         rospy.init_node('client')
         #sub to rviz, navPose
         self.subNav = rospy.Subscriber("/navPose", PoseStamped, self.endCallback)
@@ -33,9 +33,8 @@ class Client:
         #self.subMap = rospy.Subscriber("/map", OccupancyGrid, self.mapCallback)
 
     def a_star_client(self, start, goal):
-        print "in_clinet"
+        print "in_client"
         rospy.wait_for_service('a_star_path')
-        print("after wait")
         startPose = PoseStamped()
         endPose = PoseStamped()
         message = GetPlan()
@@ -45,32 +44,35 @@ class Client:
         message.goal = endPose
         tolerance = .5
         try:
-            print "in try"
             a_star_path = rospy.ServiceProxy('a_star_path', GetPlan)
             resp1 = a_star_path(startPose, endPose, tolerance )
-            print "message sent"
-            return resp1.path
+            print "swoosh (ie message sent)"
+            #Create new Robot  for later
+            # robot = Robot()
+            # #take the output and send the path to NavToPose
+            # robot.navToPose(resp1.plan)
+            return resp1.plan
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
 
 #callback that sets appropriate fields in self.
     def endCallback(self, msg):
         #PoseStamped
-        print "in end"
         self.end = msg.pose
-        print self.end.position.x
-        print self.end.position.y
-        #print self.start.position.x
+        #verify position is correct
+        print"goal x:", self.end.position.x
+        print "goal y:", self.end.position.y
+        #make sure we have a start position before proceeding
         if self.start is not None:
-            #print "in if"
+            #Send to Service
             self.a_star_client(self.start, self.end)
+
 #callback that sets appropriate fields for start
     def initialCallback(self, msg):
-        print "in inital"
         #PoseWithCovarianceStamped
         self.start = msg.pose.pose
-        print self.start.position.x
-        print self.start.position.y
+        print "start x:",self.start.position.x
+        print "start y:", self.start.position.y
 
 
 
