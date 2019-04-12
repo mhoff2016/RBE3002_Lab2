@@ -48,9 +48,9 @@ class Client:
             resp1 = a_star_path(startPose, endPose, tolerance )
             print "swoosh (ie message sent)"
             #Create new Robot  for later
-            # robot = Robot()
+            robot = Robot()
             # #take the output and send the path to NavToPose
-            # robot.navToPose(resp1.plan)
+            robot.nav_to_pose(resp1.plan.poses)
             return resp1.plan
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e

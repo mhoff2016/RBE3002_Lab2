@@ -10,6 +10,7 @@ import math
 
 
 
+
 class Robot:
 
     def __init__(self):
@@ -28,90 +29,96 @@ class Robot:
         #print self.start.position.x
 
         navY = 0
-        #initial pos
+        #initial pos3. Find interesting areas to expand the map
         self.inX = 0
         self.inY = 0
         #current yaw
         self.yaw = 0
 
         #Called "lab02"
-        rospy.init_node('lab02')
+        #rospy.init_node('lab02')
 
         #subscribe to odom
         self.subOdom = rospy.Subscriber("/odom", Odometry, self.oDomCallback)
 
         #sub to rviz, navPose
-        self.subNav = rospy.Subscriber("/navPose", PoseStamped, self.endCallback)
+        #self.subNav = rospy.Subscriber("/navPose", PoseStamped, self.endCallback)
 
         #sub to initial Pose
-        self.subNav = rospy.Subscriber("/initialpose", PoseWithCovarianceStamped, self.initialCallback)
+        #self.subNav = rospy.Subscriber("/initialpose", PoseWithCovarianceStamped, self.initialCallback)
 
         #pub to cmd_vel
         self.pubVel = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
-    def endCallback(self, msg):
-        #PoseStamped
-        self.end = msg.pose
-        print self.end.position.x
-        #print self.start.position.x
-        if self.start is not None:
-            #print "in if"
-            self.a_star_client(self.start, self.end)
 
-    def initialCallback(self, msg):
-        #PoseWithCovarianceStamped
-        self.start = msg.pose.pose
-        print self.start.position.x
+    # def nav_to_pose(self, msg):
+    #     # type: (PoseStamped) -> None
+    #     """
+    #     This is a callback function. It should extract data from goal, drive in a striaght line to reach the goal and
+    #     then spin to match the goal orientation.
+    #     :param goal: PoseStamped
+    #     :return:
+    #     """
+    #     #get desired position and orientation
+    #     navX = msg.pose.position.x
+    #     navY = msg.pose.position.y
+    #     quatn = msg.pose.orientation
+    #     qn = [quatn.x, quatn.y, quatn.z, quatn.w]
+    #
+    #     #convert into roll pitch and yaw in radians
+    #     (self.rollN, self.pitchN, self.yawN) = euler_from_quaternion(qn)
+    #
+    #     #calculate angle needed to get to next position
+    #     initialAngle = math.atan((navY - self.inY)/(navX - self.inX))
+    #
+    #     #rotate angle needed to get to next position
+    #     self.rotate(initialAngle)
+    #     #Calculate distance necessary to drive forward (pyhtagoreum theorum)
+    #     pythagLength = ((navX**2)+(navY ** 2))** (0.5)
+    #     #drive straigh the appropriate distance
+    #     self.drive_straight(.22, pythagLength)
+    #     #rotate to match desired pose
+    #     self.rotate(self.yawN)
 
-    def a_star_client(self, start, goal):
-        print "in_clinet"
-        rospy.wait_for_service('a_star_path')
-        print("after wait")
-        startPose = PoseStamped()
-        endPose = PoseStamped()
-        message = GetPlan()
-        startPose.pose = self.start
-        endPose.pose = self.end
-        message.start = startPose
-        message.goal = endPose
-        tolerance = .5
-        try:
-            print "in try"
-            a_star_path = rospy.ServiceProxy('a_star_path', GetPlan)
-            resp1 = a_star_path(startPose, endPose, tolerance )
-            print "message sent"
-            return resp1.path
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
-
-    def nav_to_pose(self, msg):
+    def nav_to_pose(self, distlist):
         # type: (PoseStamped) -> None
         """
-        This is a callback function. It should extract data from goal, drive in a striaght line to reach the goal and
+        This is a callback function. It should extract data from goal, drive in a straight line to reach the goal and
         then spin to match the goal orientation.
         :param goal: PoseStamped
         :return:
         """
-        #get desired position and orientation
-        navX = msg.pose.position.x
-        navY = msg.pose.position.y
-        quatn = msg.pose.orientation
-        qn = [quatn.x, quatn.y, quatn.z, quatn.w]
+        i = 0 #start
+        j = 1 #goal
+        print "type:", type(distlist)
+        while j < len(distlist):
+            # get desired position and orientation
+            goalX = distlist[j].pose.position.x
+            goalY = distlist[j].pose.position.y
+            startX = distlist[i].pose.position.x
+            startY = distlist[i].pose.position.y
+            quatn = distlist[j].pose.orientation
+            qn = [quatn.x, quatn.y, quatn.z, quatn.w]
+            navX = goalX - startX
+            navY = goalY - startY
+            i += 1
+            j += 1
+            # convert into roll pitch and yaw in radians
+            (self.rollN, self.pitchN, self.yawN) = euler_from_quaternion(qn)
 
-        #convert into roll pitch and yaw in radians
-        (self.rollN, self.pitchN, self.yawN) = euler_from_quaternion(qn)
+            # calculate angle needed to get to next position
+            if goalX == startX:
+                initialAngle = 0
+            else:
+                initialAngle = math.atan(navY / navX)
 
-        #calculate angle needed to get to next position
-        initialAngle = math.atan((navY - self.inY)/(navX - self.inX))
-
-        #rotate angle needed to get to next position
-        self.rotate(initialAngle)
-        #Calculate distance necessary to drive forward (pyhtagoreum theorum)
-        pythagLength = ((navX**2)+(navY ** 2))** (0.5)
-        #drive straigh the appropriate distance
-        self.drive_straight(.22, pythagLength)
-        #rotate to match desired pose
-        self.rotate(self.yawN)
+            # rotate angle needed to get to next position
+            self.rotate(initialAngle)
+            # Calculate distance necessary to drive forward (pyhtagoreum theorum)
+            pythagLength = ((navX ** 2) + (navY ** 2)) ** (0.5)
+            # drive straigh the appropriate distance
+            self.drive_straight(.22, pythagLength)
+            rospy.sleep(1)
 
     def drive_straight(self, speed, distance):
         """
