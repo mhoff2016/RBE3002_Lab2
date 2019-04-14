@@ -12,6 +12,7 @@ import math
 
 
 class Robot:
+    ## TODO: use acml to have the robot snap to the position set with 2d
 
     def __init__(self):
         """"
@@ -159,19 +160,71 @@ class Robot:
         self.pubVel.publish(vel_msg)
 
 
+    # def rotate(self, angle):
+    #     """
+    #     Rotate in place
+    #     :param angle: angle to rotate
+    #     :return:
+    #     """
+    #     angSpeed = .262 #radian equivalent of 15 degrees
+    #     radAngle = angle
+    #     #not needed
+    #     seconds = float(radAngle)/angSpeed
+    #
+    #     vel_msg = Twist()
+    #     vel_msg.linear.x = 0
+    #     #Since we are moving just in x-axis
+    #     vel_msg.linear.y = 0
+    #     vel_msg.linear.z = 0
+    #     vel_msg.angular.x = 0
+    #     vel_msg.angular.y = 0
+    #     #set angular velocity
+    #     vel_msg.angular.z = angSpeed
+    #
+    #     initialYaw = self.yaw
+    #     currentYaw = self.yaw
+    #     while  currentYaw <= (initialYaw + angle):
+	#         # publish the velocity
+    #         self.pubVel.publish(vel_msg)
+	#         # wait for 0.1 seconds (10 HZ) and publish again
+    #         currentYaw = self.yaw
+    #     #stop bot when done
+    #     vel_msg.angular.z = 0
+    #     self.pubVel.publish(vel_msg)
+
     def rotate(self, angle):
         """
         Rotate in place
-        :param angle: angle to rotate
+        :param angle: angle to rotate (assuming angle in degrees)
         :return:
         """
-        angSpeed = .262 #radian equivalent of 15 degrees
-        radAngle = angle
-        #not needed
-        seconds = float(radAngle)/angSpeed
+        print "yaw:", self.yaw
+        goal = self.yaw - angle
+        if goal > (math.pi):
+            goal = -(2*math.pi - goal)
 
+
+        #To begin rotating
+
+        flag = False #means rotation not complete
+        while(not flag and not rospy.is_shutdown()):
+
+            current = self.yaw
+            print("Current Pos: " + str(current))
+            print("End Orient: " + str(goal))
+            diff = abs((current - goal))
+            #print(diff)
+            if ((diff < .05 and diff > - .05)):
+                self.rotateWheels(0)
+                flag = True
+            else:
+                if (goal < 0):
+                    self.rotateWheels(-.22)
+                else:
+                    self.rotateWheels(.22)
+
+    def rotateWheels(self, angSpeed):
         vel_msg = Twist()
-        r = rospy.Rate(1); #not needed
         vel_msg.linear.x = 0
         #Since we are moving just in x-axis
         vel_msg.linear.y = 0
@@ -180,17 +233,9 @@ class Robot:
         vel_msg.angular.y = 0
         #set angular velocity
         vel_msg.angular.z = angSpeed
-
-        initialYaw = self.yaw
-        currentYaw = self.yaw
-        while  currentYaw <= (initialYaw + angle):
-	        # publish the velocity
-            self.pubVel.publish(vel_msg)
-	        # wait for 0.1 seconds (10 HZ) and publish again
-            currentYaw = self.yaw
-        #stop bot when done
-        vel_msg.angular.z = 0
         self.pubVel.publish(vel_msg)
+        rospy.sleep(.0001)
+
 
 
     def oDomCallback(self, msg):
@@ -207,6 +252,8 @@ class Robot:
 if __name__ == '__main__':
     print("running lab2")
     rob = Robot()
+    rospy.sleep(1)
+    rob.rotate(math.pi/2)
     #rob.drive_straight(1, 2)
     #rob.rotate(3*math.pi/2)
     #rob.rotate(math.pi/2)

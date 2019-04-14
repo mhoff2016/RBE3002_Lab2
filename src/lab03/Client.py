@@ -49,7 +49,11 @@ class Client:
             print "swoosh (ie message sent)"
             #Create new Robot  for later
             robot = Robot()
+            rospy.sleep(1)
             # #take the output and send the path to NavToPose
+            # robot.drive_straight(.5, .5)
+            # robot.rotate(-math.pi/2)
+            # robot.drive_straight(.5, .5)
             robot.nav_to_pose(resp1.plan.poses)
             return resp1.plan
         except rospy.ServiceException, e:

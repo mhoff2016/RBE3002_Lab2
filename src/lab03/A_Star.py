@@ -288,7 +288,7 @@ class A_Star:
     def reconstruct_path(self, start, goal, came_from):
         """
             Rebuild the path from a dictionary
-            :param start: starting key
+            :param start: starting keyy * self.width + x)
             :param goal: starting value
             :param came_from: dictionary of tuples
             :return: list of tuples
