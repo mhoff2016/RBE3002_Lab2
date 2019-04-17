@@ -191,6 +191,33 @@ class Robot:
     #     #stop bot when done
     #     vel_msg.angular.z = 0
     #     self.pubVel.publish(vel_msg)
+	
+"""
+def rotate(self, angle):                           
+       # Rotate in place
+       # :param angle: angle to rotate
+       # :return:
+        
+	startYaw = self.yaw
+
+	while (angle > (((startYaw-self.yaw)**2)**.5)):	#threshold of arrived at the angle or not
+		
+		self.vel_msg.linear.x = 0
+		self.vel_msg.linear.y = 0
+		self.vel_msg.linear.z = 0
+		
+		self.vel_msg.angular.x = 0
+		self.vel_msg.angular.y = 0		
+		self.vel_msg.angular.z = .1
+
+		self.vel_pub.publish(self.vel_msg)      #publishes the linear and angular speeds that were set in vel_msg
+		
+		self.rate.sleep()
+
+	self.vel_msg.angular.z = 0         #sets the robot to stop spinning
+
+	self.vel_pub.publish(self.vel_msg)  #publish the stop message
+"""
 
     def rotate(self, angle):
         """
