@@ -191,77 +191,79 @@ class Robot:
     #     #stop bot when done
     #     vel_msg.angular.z = 0
     #     self.pubVel.publish(vel_msg)
-	
-"""
-def rotate(self, angle):                           
-       # Rotate in place
-       # :param angle: angle to rotate
-       # :return:
-        
-	startYaw = self.yaw
 
-	while (angle > (((startYaw-self.yaw)**2)**.5)):	#threshold of arrived at the angle or not
-		
-		self.vel_msg.linear.x = 0
-		self.vel_msg.linear.y = 0
-		self.vel_msg.linear.z = 0
-		
-		self.vel_msg.angular.x = 0
-		self.vel_msg.angular.y = 0		
-		self.vel_msg.angular.z = .1
-
-		self.vel_pub.publish(self.vel_msg)      #publishes the linear and angular speeds that were set in vel_msg
-		
-		self.rate.sleep()
-
-	self.vel_msg.angular.z = 0         #sets the robot to stop spinning
-
-	self.vel_pub.publish(self.vel_msg)  #publish the stop message
-"""
 
     def rotate(self, angle):
-        """
-        Rotate in place
-        :param angle: angle to rotate (assuming angle in degrees)
-        :return:
-        """
-        print "yaw:", self.yaw
-        goal = self.yaw - angle
-        if goal > (math.pi):
-            goal = -(2*math.pi - goal)
-
-
-        #To begin rotating
-
-        flag = False #means rotation not complete
-        while(not flag and not rospy.is_shutdown()):
-
-            current = self.yaw
-            print("Current Pos: " + str(current))
-            print("End Orient: " + str(goal))
-            diff = abs((current - goal))
-            #print(diff)
-            if ((diff < .05 and diff > - .05)):
-                self.rotateWheels(0)
-                flag = True
-            else:
-                if (goal < 0):
-                    self.rotateWheels(-.22)
-                else:
-                    self.rotateWheels(.22)
-
-    def rotateWheels(self, angSpeed):
+           # Rotate in place
+           # :param angle: angle to rotate
+           # :return:
+        #make type twist
         vel_msg = Twist()
-        vel_msg.linear.x = 0
-        #Since we are moving just in x-axis
-        vel_msg.linear.y = 0
-        vel_msg.linear.z = 0
-        vel_msg.angular.x = 0
-        vel_msg.angular.y = 0
-        #set angular velocity
-        vel_msg.angular.z = angSpeed
-        self.pubVel.publish(vel_msg)
-        rospy.sleep(.0001)
+
+    	startYaw = self.yaw
+
+    	while (angle > (((startYaw-self.yaw)**2)**.5)):	#threshold of arrived at the angle or not
+
+    		vel_msg.linear.x = 0
+    		vel_msg.linear.y = 0
+    		vel_msg.linear.z = 0
+
+    		vel_msg.angular.x = 0
+    		vel_msg.angular.y = 0
+    		vel_msg.angular.z = .1
+
+    		self.pubVel.publish(vel_msg)      #publishes the linear and angular speeds that were set in vel_msg
+
+    		#self.rate.sleep()
+
+    	vel_msg.angular.z = 0         #sets the robot to stop spinning
+
+    	self.pubVel.publish(vel_msg)  #publish the stop message
+
+    #
+    # def rotate(self, angle):
+    #     """
+    #     Rotate in place
+    #     :param angle: angle to rotate (assuming angle in degrees)
+    #     :return:
+    #     """
+    #     print "yaw:", self.yaw
+    #     goal = self.yaw - angle
+    #     if goal > (math.pi):
+    #         goal = -(2*math.pi - goal)
+    #
+    #
+    #     #To begin rotating
+    #
+    #     flag = False #means rotation not complete
+    #     while(not flag and not rospy.is_shutdown()):
+    #
+    #         current = self.yaw
+    #         print("Current Pos: " + str(current))
+    #         print("End Orient: " + str(goal))
+    #         diff = abs((current - goal))
+    #         #print(diff)
+    #         if ((diff < .05 and diff > - .05)):
+    #             self.rotateWheels(0)
+    #             flag = True
+    #         else:
+    #             if (goal < 0):
+    #                 self.rotateWheels(-.22)
+    #             else:
+    #                 self.rotateWheels(.22)
+    #
+    # def rotateWheels(self, angSpeed):
+    #     vel_msg = Twist()
+    #     vel_msg.linear.x = 0
+    #     #Since we are moving just in x-axis
+    #     vel_msg.linear.y = 0
+    #     vel_msg.linear.z = 0
+    #     vel_msg.angular.x = 0
+    #     vel_msg.angular.y = 0
+    #     #set angular velocity
+    #     vel_msg.angular.z = angSpeed
+    #     self.pubVel.publish(vel_msg)
+    #     rospy.sleep(.0001)
 
 
 

@@ -7,6 +7,8 @@ from nav_msgs.msg import GridCells, OccupancyGrid
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Point
 from tf.transformations import euler_from_quaternion
+from sklearn.cluster import KMeans
+import numpy as np
 import math
 from Robot import *
 
@@ -30,7 +32,7 @@ class Client:
         self.subInitial = rospy.Subscriber("/initialpose", PoseWithCovarianceStamped, self.initialCallback)
 
         #SUB TO map
-        #self.subMap = rospy.Subscriber("/map", OccupancyGrid, self.mapCallback)
+        self.subMap = rospy.Subscriber("/map", OccupancyGrid, self.mapCallback)
 
     def a_star_client(self, start, goal):
         print "in_client"
@@ -59,6 +61,16 @@ class Client:
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
 
+    def mapCallback(self, msg):
+        #store appropriate data
+        self.map = msg.data
+        self.width = msg.info.width
+        self.height = msg.info.height
+        self.resolution = msg.info.resolution
+        twoMap = np.reshape(self.map, (-1, self.width))
+        print twoMap
+        #print self.resolution
+
 #callback that sets appropriate fields in self.
     def endCallback(self, msg):
         #PoseStamped
@@ -80,9 +92,19 @@ class Client:
 
 
 
+#       [0 1 0 0 0]
+#       [0 1 0 0 0]
+#       [0 0 0 0 0]
+#       [0 0 0 1 0]
+#       [0 0 0 1 0]
+#top to bottom
+testMap = [0, 100, 0, 0, 0, 0, 100, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ,0, 0, 100, 0]
+
 
 if __name__ == '__main__':
     client1 = Client()
+    B = np.reshape(testMap, (-1, 5))
+    print B
     print("running client")
     while not rospy.is_shutdown():
         pass
