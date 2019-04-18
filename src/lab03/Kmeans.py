@@ -4,7 +4,7 @@ import rospy
 map = None
 width = None
 height = None
-
+neighborsSearched = []
 
 
 
@@ -22,17 +22,24 @@ def something(m, w, h):
         #if you find a valib point
         if map[i] == 0:
             #if the point has at least one neighbotr that is -1
-            if neighborFrontier(point, map, width):
+            print neighborFrontier(point, map, width)
+            if len(neighborFrontier(point, map, width)) > 0:
                 #add point to a list
-                print "in if"
+                #print "in if"
                 frontierList.append(point)
                 frontierList + (findSurroundings(point))
     return frontierList
 
 def findSurroundings(point):
+    global neighborsSearched
     resList = []
     for neighbor in neighbors(point):
-        if neighborFrontier(neighbor, map, width):
+        #if the neighbor has a neighbor that has -1
+        if neighborFrontier(neighbor, map, width) and\
+         not neighbor in neighborsSearched:
+            #add neighbor to neaighbors searched
+            neighborsSearched.append(neighbor)
+            #add neighbor to relist
             resList.append(neighbor)
             resList + (findSurroundings(neighbor))
     return resList
@@ -63,6 +70,7 @@ def neighbors(node):
 #checks if a neighbor contains -1
 def neighborFrontier(point, map, width):
     #stores all valid neighbors
+    print "point:", point
     neighborMap =[]
     #current nodes x and y
     xCurr = point[0]
@@ -70,35 +78,49 @@ def neighborFrontier(point, map, width):
 
     for x in range(1, -2, -2): # check for valid locations when x +1 and x-1
         for y in range(1, -2, -2):# check for valid locations when y +1 and y-1
-            if (validFrontier((xCurr+(x)), yCurr)) and\
-                not ((xCurr+(x)), yCurr) in neighborMap:
-                print "should append"
-                neighborMap.append(((xCurr+(x)), yCurr))
-            if validFrontier((xCurr+(x)), (yCurr + (y))) and\
-                not ((xCurr+(x)), (yCurr + (y))) in neighborMap:
-                print "should append"
-                neighborMap.append(((xCurr+(x)), (yCurr + (y))))
-            if validFrontier((xCurr), (yCurr + (y))) and\
-                not ((xCurr), (yCurr + (y))) in neighborMap:
-                print "should append"
-                neighborMap.append(((xCurr), (yCurr + (y))))
-    print "neighbormap", neighborMap
+            flagX = ((x + xCurr) <= width) or ((x + xCurr) >= 0) #equals 1 when in bounds
+            flagY = ((y + yCurr) <= height) or ((y + yCurr) >= 0) #equals 1 when in bounds
+            flag = flagX and flagY
+            if flag:
+                if (validFrontier((xCurr+(x)), yCurr)) and\
+                    not ((xCurr+(x)), yCurr) in neighborMap:
+                    #print "should append"
+                    neighborMap.append(((xCurr+(x)), yCurr))
+                if validFrontier((xCurr+(x)), (yCurr + (y))) and\
+                    not ((xCurr+(x)), (yCurr + (y))) in neighborMap:
+                    #print "should append"
+                    neighborMap.append(((xCurr+(x)), (yCurr + (y))))
+                if validFrontier((xCurr), (yCurr + (y))) and\
+                    not ((xCurr), (yCurr + (y))) in neighborMap:
+                    #print "should append"
+                    neighborMap.append(((xCurr), (yCurr + (y))))
+    #print "neighbormap", neighborMap
     return neighborMap
 
 def validFrontier(x, y):
+        #print"x", x
+        #print"y", y
+        #print "width:" , width
+        #print "height:" , height
+        #print "in validFrontier"
         if x <= 0 or y <= 0:
+            #print "flase"
             return False
-        index = int(y * width + x) #this may need to be adjusted
+
         # print"x:", x
         # print "y:",y
         # print index
-        if x > width or y > height:
+        if x > width-1 or y > height-1:
+            #print "false"
             return False
-        if map[index] == -1:
-            print"true"
-            return True
         else:
-            return False
+            index = int(y * width + x) #this may need to be adjusted
+            #print "index",index
+            if map[index] == -1:
+                print "index",index
+                #print"true"
+                return True
+
 
 #determines if a position is a valid one
 def validLoc( x, y):
@@ -127,6 +149,6 @@ width = 3
 if __name__ == '__main__':
     print("running kmeans,but not reaally")
     #tests
-    print something(tester2, width2, 0)
+    print something(tester2, width2, 5)
     while not rospy.is_shutdown():
         pass
