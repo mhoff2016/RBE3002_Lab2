@@ -1,0 +1,6 @@
+References.txt
+
+source:
+https://www.redblobgames.com/pathfinding/a-star/implementation.html
+
+Used the example implementation of A Star as a base for my algorithm
